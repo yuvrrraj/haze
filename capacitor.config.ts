@@ -10,9 +10,13 @@ const config: CapacitorConfig = {
   },
   android: {
     allowMixedContent: false,
+    captureInput: true,
+    webContentsDebuggingEnabled: false,
   },
-  ios: {
-    contentInset: 'automatic',
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 0,
+    },
   },
 };
 
