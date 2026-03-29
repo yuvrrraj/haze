@@ -19,6 +19,9 @@ interface Story {
   thumbnail_url: string | null;
   expires_at: string;
   created_at: string;
+  music_name: string | null;
+  music_artist: string | null;
+  music_preview_url: string | null;
   user: { username: string; avatar_url: string | null } | null;
 }
 
@@ -48,6 +51,7 @@ function StoriesInner() {
   const [savingHighlight, setSavingHighlight] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const musicRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(Date.now());
   const touchStartX = useRef<number>(0);
@@ -62,7 +66,7 @@ function StoriesInner() {
     async function load() {
       const { data } = await supabase
         .from("stories")
-        .select("*, user:profiles(username, avatar_url)")
+        .select("*, user:profiles(username, avatar_url), music_name, music_artist, music_preview_url")
         .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: true });
 
@@ -116,6 +120,25 @@ function StoriesInner() {
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.muted = muted;
+  }, [muted]);
+
+  // Play music when story changes
+  useEffect(() => {
+    // Stop previous music
+    if (musicRef.current) { musicRef.current.pause(); musicRef.current.src = ""; musicRef.current = null; }
+    if (!current?.music_preview_url) return;
+    const audio = new Audio(current.music_preview_url);
+    audio.loop = true;
+    audio.volume = 0.7;
+    audio.muted = muted;
+    audio.play().catch(() => {});
+    musicRef.current = audio;
+    return () => { audio.pause(); audio.src = ""; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userIndex, storyIndex, current?.id]);
+
+  useEffect(() => {
+    if (musicRef.current) musicRef.current.muted = muted;
   }, [muted]);
 
   function goNextStory() {
@@ -307,6 +330,14 @@ function StoriesInner() {
             )}
           </div>
           <span className="text-white text-sm font-semibold flex-1">{current.user?.username}</span>
+          {current.music_name && (
+            <div className="flex items-center gap-1 bg-black/40 rounded-full px-2 py-0.5 max-w-[120px]">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white shrink-0">
+                <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+              </svg>
+              <span className="text-white text-xs truncate">{current.music_name}</span>
+            </div>
+          )}
           {isVideo && (
             <button onClick={() => setMuted((m) => !m)} className="p-1.5 text-white">
               {muted ? <HiVolumeOff size={20} /> : <HiVolumeUp size={20} />}
