@@ -92,13 +92,13 @@ export default function UploadReel() {
       const { error } = await supabase.from("reels").insert({
         user_id: user.id,
         caption: caption.trim() || null,
-        video_url: data.url,
-        hls_url: data.hlsUrl ?? null,
-        thumbnail_url: data.thumbnail ?? null,
+        video_url: result.secure_url,
+        hls_url: result.secure_url,
+        thumbnail_url: thumbnail,
         ...(selectedTrack ? { music_name: selectedTrack.name, music_artist: selectedTrack.artist, music_cover: selectedTrack.cover, music_preview_url: selectedTrack.preview_url } : {}),
       });
       if (error) {
-        const { error: e2 } = await supabase.from("reels").insert({ user_id: user.id, caption: caption.trim() || null, video_url: data.url, hls_url: data.hlsUrl ?? null, thumbnail_url: data.thumbnail ?? null });
+        const { error: e2 } = await supabase.from("reels").insert({ user_id: user.id, caption: caption.trim() || null, video_url: result.secure_url, hls_url: result.secure_url, thumbnail_url: thumbnail });
         if (e2) throw e2;
       }
 
