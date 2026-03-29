@@ -9,9 +9,26 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@imagekit/javascript": "^5.2.2",
+    "@imagekit/next": "^2.1.5",
+    "@imagekit/nodejs": "^7.3.0",
+    "@nhost/nextjs": "^2.3.1",
+    "@nhost/nhost-js": "^4.6.0",
+    "@supabase/ssr": "^0.9.0",
+    "@supabase/supabase-js": "^2.49.4",
+    "cloudinary": "^2.9.0",
+    "date-fns": "^4.1.0",
+    "imagekit": "^6.0.0",
+    "imagekit-javascript": "^4.0.1",
+    "imagekitio-next": "^1.0.1",
+    "lucide-react": "^1.7.0",
     "next": "16.2.1",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-hot-toast": "^2.6.0",
+    "react-icons": "^5.6.0",
+    "resend": "^6.9.4",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
