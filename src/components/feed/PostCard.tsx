@@ -67,7 +67,6 @@ export default function PostCard({ post, index = 99, initialLiked = false, initi
     }, 100);
     return () => {
       clearTimeout(timer);
-      if (ytLoopTimer.current) clearInterval(ytLoopTimer.current);
       try { ytMusicRef.current?.remove?.(); } catch {}
       ytMusicRef.current = null;
     };
