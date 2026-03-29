@@ -12,6 +12,10 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.0",
+    "@capacitor/cli": "^8.3.0",
+    "@capacitor/core": "^8.3.0",
+    "@capacitor/ios": "^8.3.0",
     "@imagekit/javascript": "^5.2.2",
     "@imagekit/next": "^2.1.5",
     "@imagekit/nodejs": "^7.3.0",
