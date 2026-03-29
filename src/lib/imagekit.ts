@@ -1,4 +1,4 @@
-const ENDPOINT = (process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT ?? "").replace(/\/$/, "");
+const ENDPOINT = (process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT ?? "").replace(/\/$/, "").trim();
 
 export function ikUrl(
   path: string,
@@ -6,29 +6,34 @@ export function ikUrl(
 ) {
   if (!path) return "";
 
-  // Non-ImageKit URLs (e.g. Cloudinary) — return as-is
+  // Already a full non-ImageKit URL — return as-is
   if (path.startsWith("http") && !path.includes("imagekit.io")) return path;
 
-  // Strip endpoint prefix to get a clean relative path
-  let cleanPath = path.startsWith(ENDPOINT) ? path.slice(ENDPOINT.length) : path;
-  if (!cleanPath.startsWith("/")) cleanPath = "/" + cleanPath;
-  // Strip any existing /tr:... transformation segment (handles both /tr:x/path and /tr:x,y/path)
-  cleanPath = cleanPath.replace(/^\/tr:[^/]+(,[^/]+)*/, "");
-  if (!cleanPath.startsWith("/")) cleanPath = "/" + cleanPath;
+  // Already a full ImageKit URL
+  if (path.startsWith("http") && path.includes("imagekit.io")) {
+    // strip any existing tr: segment then re-apply
+    const withoutTr = path.replace(/\/tr:[^/]+/, "");
+    if (!transforms) return withoutTr;
+    const base = withoutTr.replace(ENDPOINT, "");
+    const tr = buildTr(transforms);
+    return `${ENDPOINT}/tr:${tr}${base.startsWith("/") ? base : "/" + base}`;
+  }
 
-  // No transforms requested — serve the original file at full quality
+  // Bare filename or relative path — prepend endpoint
+  let cleanPath = path.startsWith("/") ? path : "/" + path;
   if (!transforms) return `${ENDPOINT}${cleanPath}`;
+  return `${ENDPOINT}/tr:${buildTr(transforms)}${cleanPath}`;
+}
 
+function buildTr(transforms: { w?: number; h?: number; q?: number; blur?: number }) {
   const tr: string[] = [];
   if (transforms.w) tr.push(`w-${transforms.w}`);
   if (transforms.h) tr.push(`h-${transforms.h}`);
-  // default quality 90 when resizing, otherwise 100
   const q = transforms.q ?? (transforms.w || transforms.h ? 90 : 100);
   tr.push(`q-${q}`);
   if (transforms.blur) tr.push(`bl-${transforms.blur}`);
   tr.push("f-auto");
-
-  return `${ENDPOINT}/tr:${tr.join(",")}${cleanPath}`;
+  return tr.join(",");
 }
 
 // LQIP blur placeholder — only works for ImageKit URLs

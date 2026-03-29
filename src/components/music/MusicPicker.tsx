@@ -16,7 +16,8 @@ export default function MusicPicker({ onSelect, onClose }: { onSelect: (music: a
     try {
       const res = await fetch(`/api/${source}?q=${encodeURIComponent(query)}`)
       const data = await res.json()
-      setResults(data.tracks || data.videos || [])
+      // spotify returns tracks[], youtube returns items[]
+      setResults(data.tracks || data.items || [])
     } catch {
       setResults([])
     } finally {
@@ -71,7 +72,7 @@ export default function MusicPicker({ onSelect, onClose }: { onSelect: (music: a
                 <Image src={track.cover_url} alt="" width={48} height={48} className="rounded-lg object-cover" />
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{track.title}</p>
+                <p className="text-sm font-medium truncate">{track.name || track.title}</p>
                 <p className="text-xs text-zinc-400 truncate">{track.artist}</p>
               </div>
               <div className="flex items-center gap-2">

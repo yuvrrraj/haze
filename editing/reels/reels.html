@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Reels Editor - Simple & Fast</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="reels.css"/>
+</head>
+<body>
+
+<div class="app">
+  <header class="topbar">
+    <button class="btn-close-editor" id="closeEditorBtn" onclick="window.parent.postMessage({type:'CLOSE_EDITOR'}, '*')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+    <button class="btn-export" id="exportBtn">Next →</button>
+  </header>
+
+  <div class="main">
+    <div class="center">
+
+
+
+
+
+
+      <div class="preview-area">
+        <div class="preview-container" id="previewContainer">
+          <video id="previewVideo" playsinline></video>
+          <canvas id="overlayCanvas"></canvas>
+          <div id="overlayElements"></div>
+          <div class="empty-state" id="emptyState">
+            <div class="empty-icon">🎬</div>
+            <div>Import a video to start</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="ctrl-btn" id="playBtn">
+          <svg id="playIcon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <svg id="pauseIcon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+            <rect x="6" y="4" width="4" height="16"></rect>
+            <rect x="14" y="4" width="4" height="16"></rect>
+          </svg>
+        </button>
+        <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
+        <div class="speed-control">
+          <label>Speed:</label>
+          <select id="speedSelect">
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="timeline-area">
+        <div class="timeline-header">
+          <span class="timeline-label">Timeline</span>
+          <span class="timeline-duration" id="timelineDuration">0:00</span>
+        </div>
+        <div class="timeline-track" id="timelineTrack">
+          <div class="clip-container" id="clipContainer"></div>
+          <div class="playhead" id="playhead"></div>
+        </div>
+        
+        <!-- Text Timeline Layer -->
+        <div class="text-layer-track" id="textLayerTrack">
+          <div class="text-layer-label">Text</div>
+          <div class="text-layer-items" id="textLayerItems"></div>
+        </div>
+        
+        <div class="trim-controls" id="trimControls">
+          <button class="trim-btn" id="trimBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="16"></line>
+              <line x1="8" y1="12" x2="16" y2="12"></line>
+            </svg>
+            Split
+          </button>
+          <button class="trim-btn" id="cutBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="6" cy="6" r="3"></circle>
+              <circle cx="6" cy="18" r="3"></circle>
+              <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+              <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+              <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+            </svg>
+            Cut
+          </button>
+        </div>
+      </div>
+
+      <!-- Bottom Navigation Bar (VN Style) -->
+      <div class="bottom-nav">
+        <button class="nav-item" data-tool="media">
+          <span class="nav-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+              <polyline points="13 2 13 9 20 9"></polyline>
+            </svg>
+          </span>
+          <span class="nav-label">Media</span>
+        </button>
+        <button class="nav-item" data-tool="music">
+          <span class="nav-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18V5l12-2v13"></path>
+              <circle cx="6" cy="18" r="3"></circle>
+              <circle cx="18" cy="16" r="3"></circle>
+            </svg>
+          </span>
+          <span class="nav-label">Music</span>
+        </button>
+        <button class="nav-item" data-tool="text">
+          <span class="nav-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 7 4 4 20 4 20 7"></polyline>
+              <line x1="9" y1="20" x2="15" y2="20"></line>
+              <line x1="12" y1="4" x2="12" y2="20"></line>
+            </svg>
+          </span>
+          <span class="nav-label">Text</span>
+        </button>
+        <button class="nav-item" data-tool="stickers">
+          <span class="nav-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+              <line x1="9" y1="9" x2="9.01" y2="9"></line>
+              <line x1="15" y1="9" x2="15.01" y2="9"></line>
+            </svg>
+          </span>
+          <span class="nav-label">Stickers</span>
+        </button>
+        <button class="nav-item" data-tool="filters">
+          <span class="nav-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <circle cx="12" cy="12" r="4"></circle>
+              <path d="M12 2v4m0 12v4M2 12h4m12 0h4"></path>
+            </svg>
+          </span>
+          <span class="nav-label">Filters</span>
+        </button>
+        <button class="nav-item" data-tool="adjust">
+          <span class="nav-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="4" y1="21" x2="4" y2="14"></line>
+              <line x1="4" y1="10" x2="4" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12" y2="3"></line>
+              <line x1="20" y1="21" x2="20" y2="16"></line>
+              <line x1="20" y1="12" x2="20" y2="3"></line>
+              <line x1="1" y1="14" x2="7" y2="14"></line>
+              <line x1="9" y1="8" x2="15" y2="8"></line>
+              <line x1="17" y1="16" x2="23" y2="16"></line>
+            </svg>
+          </span>
+          <span class="nav-label">Adjust</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tool Panels (VN Style) -->
+<div class="tool-panel hidden" id="toolPanel">
+  <div class="tool-header">
+    <h3 id="toolTitle">Tool</h3>
+    <button class="tool-close" id="toolClose">✕</button>
+  </div>
+  <div class="tool-content" id="toolContent">
+    <!-- Dynamic content loaded here -->
+  </div>
+</div>
+
+<!-- Hidden file inputs -->
+<input type="file" id="videoUpload" accept="video/*" hidden/>
+<input type="file" id="photoUpload" accept="image/*" hidden/>
+<input type="file" id="musicUpload" accept="audio/*" hidden/>
+<input type="file" id="stickerUpload" accept="image/png,image/gif" hidden/>
+
+
+<div class="modal hidden" id="exportModal">
+  <div class="modal-content">
+    <h3>Export Video</h3>
+    <p>Choose your export settings</p>
+    
+    <div class="export-settings">
+      <div class="setting-group">
+        <label>Resolution</label>
+        <select id="exportResolution" class="select">
+          <option value="1080x1920">Full HD (1080x1920)</option>
+          <option value="1440x2560">2K (1440x2560)</option>
+          <option value="2160x3840">4K (2160x3840)</option>
+        </select>
+      </div>
+      
+      <div class="setting-group">
+        <label>Frame Rate</label>
+        <select id="exportFPS" class="select">
+          <option value="30">30 FPS</option>
+          <option value="60" selected>60 FPS</option>
+        </select>
+      </div>
+      
+      <div class="setting-group">
+        <label>Quality</label>
+        <select id="exportQuality" class="select">
+          <option value="5000000">Standard (5 Mbps)</option>
+          <option value="10000000" selected>High (10 Mbps)</option>
+          <option value="20000000">Ultra (20 Mbps)</option>
+        </select>
+      </div>
+      
+      <div class="setting-group">
+        <label>Format</label>
+        <select id="exportFormat" class="select">
+          <option value="video/webm">WebM</option>
+          <option value="video/webm;codecs=vp9">WebM (VP9)</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="export-info">
+      <div id="exportInfoText">Ready to export</div>
+    </div>
+    
+    <div class="progress-bar hidden" id="progressBar">
+      <div class="progress-fill" id="progressFill"></div>
+      <div class="progress-text" id="progressText">0%</div>
+    </div>
+    
+    <div class="modal-actions">
+      <button class="btn-secondary" id="cancelExport">Cancel</button>
+      <button class="btn-primary" id="startExport">Start Export</button>
+    </div>
+  </div>
+</div>
+
+<script src="reels.js"></script>
+</body>
+</html>
