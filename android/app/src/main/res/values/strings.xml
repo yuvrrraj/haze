@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Haze</string>
+    <string name="title_activity_main">Haze</string>
+    <string name="package_name">com.haze.app</string>
+    <string name="custom_url_scheme">com.haze.app</string>
+</resources>

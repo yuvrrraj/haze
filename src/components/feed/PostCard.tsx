@@ -37,21 +37,6 @@ export default function PostCard({ post, index = 99, initialLiked = false, initi
   const musicYoutubeId: string | null = (post as any).music_youtube_id ?? null;
   const musicStartOffset: number = (post as any).music_start_offset ?? 0;
   const musicDuration: number = (post as any).music_duration_ms ? (post as any).music_duration_ms / 1000 : 30;
-  const ytLoopTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  function startYTLoop(yt: any) {
-    if (ytLoopTimer.current) clearInterval(ytLoopTimer.current);
-    const end = musicStartOffset + musicDuration;
-    ytLoopTimer.current = setInterval(() => {
-      try {
-        if (yt.getCurrentTime() >= end) {
-          yt.seekTo(musicStartOffset, true);
-          yt.playVideo();
-        }
-      } catch { if (ytLoopTimer.current) clearInterval(ytLoopTimer.current); }
-    }, 300);
-  }
-
   // Init iTunes audio
   useEffect(() => {
     if (!musicUrl) return;
@@ -64,37 +49,26 @@ export default function PostCard({ post, index = 99, initialLiked = false, initi
     return () => { audio.pause(); audio.src = ""; musicRef.current = null; };
   }, [musicUrl, musicStartOffset]);
 
-  // Init YouTube audio player (hidden)
+  // Init YouTube audio via iframe embed (works in Capacitor WebView)
   useEffect(() => {
     if (!musicYoutubeId) return;
     const containerId = `yt-post-${post.id}`;
-    function initPlayer() {
-      if (ytMusicRef.current) return;
-      const el = document.getElementById(containerId);
-      if (!el) return;
-      ytMusicRef.current = new (window as any).YT.Player(containerId, {
-        width: 1, height: 1,
-        videoId: musicYoutubeId,
-        playerVars: { autoplay: 0, controls: 0, disablekb: 1, rel: 0, start: musicStartOffset, origin: typeof window !== "undefined" ? window.location.origin : "" },
-        events: { onReady: (e: any) => { e.target.mute(); } },
-      });
-    }
     const timer = setTimeout(() => {
-      if ((window as any).YT?.Player) { initPlayer(); }
-      else {
-        const prev = window.onYouTubeIframeAPIReady;
-        window.onYouTubeIframeAPIReady = () => { prev?.(); initPlayer(); };
-        if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
-          const s = document.createElement("script");
-          s.src = "https://www.youtube.com/iframe_api";
-          document.head.appendChild(s);
-        }
-      }
+      const el = document.getElementById(containerId);
+      if (!el || ytMusicRef.current) return;
+      const iframe = document.createElement("iframe");
+      iframe.width = "1";
+      iframe.height = "1";
+      iframe.style.cssText = "position:absolute;opacity:0;pointer-events:none;";
+      iframe.allow = "autoplay";
+      iframe.src = `https://www.youtube.com/embed/${musicYoutubeId}?autoplay=0&controls=0&start=${Math.floor(musicStartOffset)}&enablejsapi=0`;
+      el.appendChild(iframe);
+      ytMusicRef.current = iframe;
     }, 100);
     return () => {
       clearTimeout(timer);
       if (ytLoopTimer.current) clearInterval(ytLoopTimer.current);
-      try { ytMusicRef.current?.destroy(); } catch {}
+      try { ytMusicRef.current?.remove?.(); } catch {}
       ytMusicRef.current = null;
     };
   }, [musicYoutubeId, musicStartOffset, post.id]);
@@ -103,47 +77,46 @@ export default function PostCard({ post, index = 99, initialLiked = false, initi
   useEffect(() => {
     if (!isVisible) {
       musicRef.current?.pause();
-      try {
-        ytMusicRef.current?.pauseVideo();
-        if (ytLoopTimer.current) clearInterval(ytLoopTimer.current);
-      } catch {}
+      const iframe = ytMusicRef.current as HTMLIFrameElement | null;
+      if (iframe) iframe.src = `https://www.youtube.com/embed/${musicYoutubeId}?autoplay=0&controls=0&start=${Math.floor(musicStartOffset)}&enablejsapi=0`;
       if (!musicMuted) setMusicMuted(true);
     }
   }, [isVisible]);
 
   const stopAudioRef = useRef<(() => void) | null>(null);
 
+  function stopYT() {
+    const iframe = ytMusicRef.current as HTMLIFrameElement | null;
+    if (iframe && musicYoutubeId) iframe.src = `https://www.youtube.com/embed/${musicYoutubeId}?autoplay=0&controls=0&start=${Math.floor(musicStartOffset)}&enablejsapi=0`;
+  }
+
+  function playYT() {
+    const iframe = ytMusicRef.current as HTMLIFrameElement | null;
+    if (iframe && musicYoutubeId) iframe.src = `https://www.youtube.com/embed/${musicYoutubeId}?autoplay=1&controls=0&start=${Math.floor(musicStartOffset)}&enablejsapi=0&mute=0`;
+  }
+
   function toggleMusicMute() {
     const newMuted = !musicMuted;
     setMusicMuted(newMuted);
 
     if (!newMuted) {
-      // Unmuting — define a single stop function for the audio manager
       function stopThis() {
         const audio = musicRef.current;
         if (audio) { audio.muted = true; audio.pause(); }
-        try { ytMusicRef.current?.mute(); ytMusicRef.current?.pauseVideo(); if (ytLoopTimer.current) clearInterval(ytLoopTimer.current); } catch {}
+        stopYT();
         setMusicMuted(true);
         stopAudioRef.current = null;
       }
       stopAudioRef.current = stopThis;
       registerAudio(stopThis);
-
-      // iTunes
       const audio = musicRef.current;
       if (audio) { audio.muted = false; audio.play().catch(() => {}); }
-
-      // YouTube
-      try {
-        const yt = ytMusicRef.current;
-        if (yt) { yt.seekTo(musicStartOffset, true); yt.unMute(); yt.setVolume(70); yt.playVideo(); startYTLoop(yt); }
-      } catch {}
+      playYT();
     } else {
-      // Muting — unregister and stop
       if (stopAudioRef.current) { unregisterAudio(stopAudioRef.current); stopAudioRef.current = null; }
       const audio = musicRef.current;
       if (audio) { audio.muted = true; audio.pause(); }
-      try { ytMusicRef.current?.mute(); ytMusicRef.current?.pauseVideo(); if (ytLoopTimer.current) clearInterval(ytLoopTimer.current); } catch {}
+      stopYT();
     }
   }
 
