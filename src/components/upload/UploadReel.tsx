@@ -63,21 +63,27 @@ export default function UploadReel() {
   async function uploadReel() {
     if (!file) return;
     setLoading(true);
-    setProgress("Uploading to Cloudinary...");
+    setProgress("Uploading video...");
 
     try {
+      // Upload directly to Cloudinary from browser (bypasses Vercel 4.5MB limit)
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
+      const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!;
       const form = new FormData();
       form.append("file", file);
-      form.append("type", "reel");
-      const res = await fetch("/api/upload", { method: "POST", body: form });
-      const data = await res.json();
-      if (!data.url) throw new Error(data.error ?? "Upload failed");
+      form.append("upload_preset", uploadPreset);
+      form.append("folder", "socialsite/reels");
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, { method: "POST", body: form });
+      const result = await res.json();
+      if (!result.secure_url) throw new Error(result.error?.message ?? "Upload failed");
+
+      // Generate thumbnail from Cloudinary
+      const thumbnail = result.secure_url.replace("/upload/", "/upload/w_400,h_700,c_fill,so_1/f_jpg/").replace(/\.[^.]+$/, ".jpg");
 
       setProgress("Saving...");
       const user = await getCurrentUser();
       if (!user) throw new Error("Not logged in");
 
-      // Ensure profile exists
       await supabase.from("profiles").upsert({
         id: user.id,
         username: user.email?.split("@")[0] ?? user.id.slice(0, 8),
@@ -92,7 +98,6 @@ export default function UploadReel() {
         ...(selectedTrack ? { music_name: selectedTrack.name, music_artist: selectedTrack.artist, music_cover: selectedTrack.cover, music_preview_url: selectedTrack.preview_url } : {}),
       });
       if (error) {
-        // fallback without music fields
         const { error: e2 } = await supabase.from("reels").insert({ user_id: user.id, caption: caption.trim() || null, video_url: data.url, hls_url: data.hlsUrl ?? null, thumbnail_url: data.thumbnail ?? null });
         if (e2) throw e2;
       }
