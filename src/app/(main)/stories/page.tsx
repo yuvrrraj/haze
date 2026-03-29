@@ -53,7 +53,6 @@ function StoriesInner() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const musicRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startTimeRef = useRef<number>(Date.now());
   const touchStartX = useRef<number>(0);
 
   useEffect(() => {
@@ -89,55 +88,79 @@ function StoriesInner() {
   const currentGroup = groups[userIndex];
   const current = currentGroup?.stories[storyIndex] ?? null;
 
+  // Handle story media + music + timer — all in one effect to ensure correct order
   useEffect(() => {
-    if (!current || current.video_url) return;
+    if (!current) return;
+    if (timerRef.current) clearInterval(timerRef.current);
     setProgress(0);
-    startTimeRef.current = Date.now();
-    timerRef.current = setInterval(() => {
-      const elapsed = Date.now() - startTimeRef.current;
-      const pct = Math.min((elapsed / DURATION) * 100, 100);
-      setProgress(pct);
-      if (elapsed >= DURATION) goNextStory();
-    }, 50);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userIndex, storyIndex, current?.id]);
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !current?.video_url) return;
-    setProgress(0);
-    video.currentTime = 0;
-    video.muted = muted;
-    video.play().catch(() => {});
-    const onTime = () => { if (video.duration) setProgress((video.currentTime / video.duration) * 100); };
-    const onEnd = () => goNextStory();
-    video.addEventListener("timeupdate", onTime);
-    video.addEventListener("ended", onEnd);
-    return () => { video.removeEventListener("timeupdate", onTime); video.removeEventListener("ended", onEnd); };
+    // Stop previous music
+    if (musicRef.current) { musicRef.current.pause(); musicRef.current.src = ""; musicRef.current = null; }
+
+    if (current.video_url) {
+      // Video story — progress driven by video timeupdate
+      const video = videoRef.current;
+      if (!video) return;
+      video.currentTime = 0;
+      video.muted = muted;
+      video.play().catch(() => {});
+      const onTime = () => { if (video.duration) setProgress((video.currentTime / video.duration) * 100); };
+      const onEnd = () => goNextStory();
+      video.addEventListener("timeupdate", onTime);
+      video.addEventListener("ended", onEnd);
+      return () => { video.removeEventListener("timeupdate", onTime); video.removeEventListener("ended", onEnd); };
+    }
+
+    // Image story — start music then timer
+    const startTimer = (duration: number) => {
+      const start = Date.now();
+      timerRef.current = setInterval(() => {
+        const elapsed = Date.now() - start;
+        setProgress(Math.min((elapsed / duration) * 100, 100));
+        if (elapsed >= duration) goNextStory();
+      }, 50);
+    };
+
+    if (current.music_preview_url) {
+      const audio = new Audio(current.music_preview_url);
+      audio.volume = 0.7;
+      audio.muted = muted;
+      musicRef.current = audio;
+
+      const onMeta = () => {
+        audio.play().catch(() => {});
+        const dur = isFinite(audio.duration) && audio.duration > 0 ? audio.duration * 1000 : DURATION;
+        startTimer(dur);
+      };
+
+      if (audio.readyState >= 1) {
+        onMeta();
+      } else {
+        audio.addEventListener("loadedmetadata", onMeta, { once: true });
+        // fallback after 800ms if metadata never fires
+        const fallback = setTimeout(() => {
+          audio.play().catch(() => {});
+          startTimer(DURATION);
+        }, 800);
+        return () => {
+          clearTimeout(fallback);
+          if (timerRef.current) clearInterval(timerRef.current);
+          audio.pause(); audio.src = ""; musicRef.current = null;
+        };
+      }
+    } else {
+      startTimer(DURATION);
+    }
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (musicRef.current) { musicRef.current.pause(); musicRef.current.src = ""; musicRef.current = null; }
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userIndex, storyIndex, current?.id]);
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.muted = muted;
-  }, [muted]);
-
-  // Play music when story changes
-  useEffect(() => {
-    // Stop previous music
-    if (musicRef.current) { musicRef.current.pause(); musicRef.current.src = ""; musicRef.current = null; }
-    if (!current?.music_preview_url) return;
-    const audio = new Audio(current.music_preview_url);
-    audio.loop = true;
-    audio.volume = 0.7;
-    audio.muted = muted;
-    audio.play().catch(() => {});
-    musicRef.current = audio;
-    return () => { audio.pause(); audio.src = ""; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userIndex, storyIndex, current?.id]);
-
-  useEffect(() => {
     if (musicRef.current) musicRef.current.muted = muted;
   }, [muted]);
 
