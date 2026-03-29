@@ -121,33 +121,33 @@ function StoriesInner() {
       }, 50);
     };
 
+    // Image story — start music then drive progress from audio timeupdate
     if (current.music_preview_url) {
       const audio = new Audio(current.music_preview_url);
       audio.volume = 0.7;
       audio.muted = muted;
       musicRef.current = audio;
 
-      const onMeta = () => {
-        audio.play().catch(() => {});
-        const dur = isFinite(audio.duration) && audio.duration > 0 ? audio.duration * 1000 : DURATION;
-        startTimer(dur);
+      const onTime = () => {
+        if (audio.duration && isFinite(audio.duration)) {
+          setProgress((audio.currentTime / audio.duration) * 100);
+        }
       };
+      const onEnd = () => goNextStory();
 
-      if (audio.readyState >= 1) {
-        onMeta();
-      } else {
-        audio.addEventListener("loadedmetadata", onMeta, { once: true });
-        // fallback after 800ms if metadata never fires
-        const fallback = setTimeout(() => {
-          audio.play().catch(() => {});
-          startTimer(DURATION);
-        }, 800);
-        return () => {
-          clearTimeout(fallback);
-          if (timerRef.current) clearInterval(timerRef.current);
-          audio.pause(); audio.src = ""; musicRef.current = null;
-        };
-      }
+      audio.addEventListener("timeupdate", onTime);
+      audio.addEventListener("ended", onEnd);
+      audio.play().catch(() => {
+        // autoplay blocked — fallback to 30s timer
+        startTimer(30000);
+      });
+
+      return () => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        audio.removeEventListener("timeupdate", onTime);
+        audio.removeEventListener("ended", onEnd);
+        audio.pause(); audio.src = ""; musicRef.current = null;
+      };
     } else {
       startTimer(DURATION);
     }
